@@ -1,0 +1,23 @@
+# R project files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Data files
+data/
+inst/extdata/
+
+# Mac system files
+.DS_Store
+
+# Output directories
+**/results/
+**/output/
+
+# Package building files
+*.tar.gz
+*.Rcheck/
+
+# Documentation
+docs/

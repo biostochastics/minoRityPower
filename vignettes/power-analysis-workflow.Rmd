@@ -1,0 +1,212 @@
+---
+title: "Power Analysis for Multi-Center Clinical Trials"
+author: "minoRityPower Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Power Analysis for Multi-Center Clinical Trials}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  fig.align = "center"
+)
+```
+
+# Introduction
+
+The `minoRityPower` package provides tools for power analysis in multi-center clinical trials, with a particular focus on minority participant enrollment. This vignette demonstrates a complete workflow from analyzing real trial data to conducting power analyses at both trial and participant levels.
+
+# Package Setup
+
+First, let's load the required packages:
+
+```{r packages}
+library(minoRityPower)
+library(dplyr)
+library(ggplot2)
+```
+
+# Part 1: Analyzing Real Trial Data
+
+## Loading Example Data
+
+The package includes example data from ClinicalTrials.gov. Let's load and examine it:
+
+```{r load-data}
+# Example data included with the package
+data(example_studies)
+data(example_conditions)
+data(example_facilities)
+
+# Examine the structure
+str(example_studies)
+str(example_conditions)
+str(example_facilities)
+```
+
+## Analyzing Trial Data
+
+We'll start by analyzing the trial data to understand enrollment patterns and estimate parameters for our power analysis:
+
+```{r analyze-trials}
+# Analyze trials with minimum requirements
+trial_results <- analyze_trials(
+  studies = example_studies,
+  conditions = example_conditions,
+  facilities = example_facilities,
+  min_duration = 11,    # Minimum trial duration (months)
+  min_enrollment = 24   # Minimum enrollment count
+)
+
+# View summary statistics
+summary(trial_results$trials$enrollment_rate)
+```
+
+## Estimating Parameters
+
+Next, we'll estimate parameters needed for power analysis:
+
+```{r estimate-params}
+# Estimate parameters from trial data
+params <- estimate_power_parameters(
+  trial_results,
+  min_rate = 1,     # Minimum acceptable rate
+  max_rate = 200    # Maximum acceptable rate
+)
+
+# Examine the estimated parameters
+print(params$parameters)
+
+# Look at the distribution of enrollment rates
+hist(params$data$enrollment_rate, 
+     main = "Distribution of Enrollment Rates",
+     xlab = "Enrollment Rate (participants/month)")
+```
+
+# Part 2: Trial-Level Power Analysis
+
+## Single Power Analysis
+
+Let's start with a simple power analysis using our estimated parameters:
+
+```{r simple-power}
+# Conduct power analysis
+power_results <- simple_power(
+  effect_size = 1.25,  # 25% increase in enrollment
+  N = 50,              # 50 trials per arm
+  tau2_facility = params$parameters$log_rate_variance,
+  mean_rate = params$parameters$mean_rate,
+  R_boot = 100        # Reduced for vignette; use 1000+ in practice
+)
+
+# Examine results
+print(power_results$power)
+print(power_results$convergence_rate)
+```
+
+## Grid Search
+
+Now let's explore power across multiple parameter combinations:
+
+```{r grid-power}
+# Create temporary directory for results
+temp_dir <- tempdir()
+
+# Grid search
+grid_results <- grid_power(
+  effect_sizes1 = c(1.10, 1.25, 1.50),
+  effect_sizes2 = c(1.10, 1.25, 1.50),
+  Ns = c(30, 45, 60),
+  tau2_facility = params$parameters$log_rate_variance,
+  mean_rate = params$parameters$mean_rate,
+  output_dir = file.path(temp_dir, "trial_level")
+)
+
+# Plot results
+trial_plots <- plot_power_results(
+  file.path(temp_dir, "trial_level"),
+  analysis_type = "trial"
+)
+
+print(trial_plots$power_heatmap)
+```
+
+# Part 3: Participant-Level Power Analysis
+
+For more detailed analysis, we can simulate at the participant level using bootstrap methods:
+
+```{r bootstrap-power}
+# Grid search with bootstrap
+bootstrap_results <- grid_bootstrap_power(
+  effect_sizes1 = c(1.10, 1.25, 1.50),
+  effect_sizes_int = c(1.10, 1.25, 1.50),
+  Ns = c(30, 45),
+  tau2_trial = params$parameters$log_rate_variance,
+  K_trial = 360,
+  output_dir = file.path(temp_dir, "participant_level"),
+  R_boot = 50  # Reduced for vignette; use 500+ in practice
+)
+
+# Plot results
+participant_plots <- plot_power_results(
+  file.path(temp_dir, "participant_level"),
+  analysis_type = "participant"
+)
+
+print(participant_plots$power_heatmap)
+```
+
+# Interpreting Results
+
+Let's compare the results from both approaches:
+
+```{r compare-results}
+# Create comparison plot
+grid.arrange(
+  trial_plots$power_heatmap + ggtitle("Trial-Level Power"),
+  participant_plots$power_heatmap + ggtitle("Participant-Level Power"),
+  ncol = 2
+)
+```
+
+Key observations:
+1. Trial-level analysis tends to be more conservative
+2. Participant-level analysis provides more granular insights
+3. Both approaches show similar patterns in power across effect sizes
+
+# Best Practices
+
+When using this package for your own analyses:
+
+1. **Data Quality**:
+   - Carefully clean and validate your input data
+   - Use appropriate inclusion/exclusion criteria
+   - Check for outliers in enrollment rates
+
+2. **Parameter Selection**:
+   - Use empirically-derived parameters when possible
+   - Consider sensitivity analyses around key parameters
+   - Document all assumptions
+
+3. **Simulation Settings**:
+   - Use larger numbers of bootstrap iterations (1000+)
+   - Check convergence rates
+   - Consider computational resources
+
+4. **Result Interpretation**:
+   - Consider both statistical and practical significance
+   - Account for model assumptions
+   - Report uncertainty in power estimates
+
+# Conclusion
+
+The `minoRityPower` package provides a comprehensive workflow for power analysis in multi-center clinical trials. By combining real data analysis with flexible simulation approaches, researchers can make informed decisions about trial design and resource allocation.
+
+For more details, see the package documentation and the references section in the README.
