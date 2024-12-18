@@ -1,6 +1,6 @@
 Package: minoRityPower
 Title: Power Analysis Tools for Minority Recruitment Interventions
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person(given = "Sergey",
            family = "Kornilov",
@@ -10,7 +10,7 @@ Description: Tools for analyzing and simulating power for minority recruitment
     interventions in clinical trials. Includes functions for analyzing 
     ClinicalTrials.gov data, estimating enrollment patterns, and conducting
     power analyses for multi-level trial designs.
-License: MIT + file LICENSE
+License: MIT
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

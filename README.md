@@ -16,7 +16,7 @@ Clinical trials often face challenges in recruiting minority participants, leadi
 
 ```r
 # Install from GitHub
-devtools::install_github("yourusername/minoRityPower")
+devtools::install_github("biostochastics/minoRityPower")
 ```
 
 ## Analysis Approaches
@@ -136,12 +136,12 @@ If you use this package, please cite:
 
 ```bibtex
 @software{your_citation_2024,
-  author       = {Your Name},
+  author       = {Sergey Kornilov},
   title        = {minoRityPower: Power Analysis for Healthcare System Interventions in Clinical Trial Enrollment},
   year         = {2024},
   publisher    = {GitHub},
-  version      = {0.1.0},
-  url          = {https://github.com/yourusername/minoRityPower}
+  version      = {0.1.1},
+  url          = {https://github.com/biostochastics/minoRityPower}
 }
 ```
 
