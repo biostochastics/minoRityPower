@@ -150,3 +150,76 @@ test_that("grid_power respects parameter bounds", {
     "N must be at least"
   )
 })
+
+test_that("facility_power_analysis handles basic case correctly", {
+  result <- facility_power_analysis(
+    effect_size = 1.25,
+    N = 30,
+    tau2_facility = 0.64,
+    mean_rate = 11,
+    R_boot = 5
+  )
+  
+  expect_type(result, "list")
+  expect_named(result, c("power", "convergence_rate", "results", "parameters"))
+  expect_true(result$power >= 0 && result$power <= 1)
+  expect_true(result$convergence_rate >= 0 && result$convergence_rate <= 1)
+})
+
+test_that("facility_power_analysis handles edge cases", {
+  # Test with minimal sample size
+  result_min <- facility_power_analysis(
+    effect_size = 1.25,
+    N = 10,  # Minimum allowed
+    tau2_facility = 0.64,
+    mean_rate = 11,
+    R_boot = 5
+  )
+  expect_true(!is.null(result_min$power))
+  
+  # Test with large effect size
+  result_large <- facility_power_analysis(
+    effect_size = 2.0,
+    N = 30,
+    tau2_facility = 0.64,
+    mean_rate = 11,
+    R_boot = 5
+  )
+  expect_true(!is.null(result_large$power))
+})
+
+test_that("grid_power handles file output correctly", {
+  temp_dir <- tempdir()
+  output_dir <- file.path(temp_dir, "power_results")
+  
+  result <- grid_power(
+    effect_sizes1 = c(1.1, 1.2),
+    Ns = c(30, 40),
+    output_dir = output_dir,
+    R_boot = 3
+  )
+  
+  # Check all expected files are created
+  expect_true(file.exists(file.path(output_dir, "power_summary.csv")))
+  expect_true(length(list.files(output_dir, pattern = "p_values_.*\\.txt$")) > 0)
+  
+  # Check summary file content
+  summary_df <- read.csv(file.path(output_dir, "power_summary.csv"))
+  expect_equal(nrow(summary_df), 4)  # 2 effect sizes × 2 sample sizes
+  expect_true(all(c("effect_size1", "N", "power", "convergence_rate") %in% names(summary_df)))
+})
+
+test_that("grid_power respects parameter combinations", {
+  temp_dir <- tempdir()
+  
+  result <- grid_power(
+    effect_sizes1 = c(1.1, 1.2),
+    effect_sizes2 = c(1.1),
+    Ns = c(30),
+    output_dir = file.path(temp_dir, "test_output"),
+    R_boot = 3
+  )
+  
+  expect_equal(nrow(result$power_grid), 2)  # 2 effect sizes × 1 sample size
+  expect_true(all(result$power_grid$N == 30))
+})

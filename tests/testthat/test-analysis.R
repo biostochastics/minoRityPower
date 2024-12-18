@@ -109,3 +109,59 @@ test_that("estimate_power_parameters handles edge cases", {
     "must be greater than"
   )
 })
+
+test_that("analyze_trials handles missing columns gracefully", {
+  test_data <- create_test_data()
+  test_data$studies$nct_id <- NULL
+  
+  expect_error(
+    analyze_trials(
+      studies = test_data$studies,
+      conditions = test_data$conditions,
+      facilities = test_data$facilities
+    ),
+    "Required columns missing"
+  )
+})
+
+test_that("analyze_trials calculates duration correctly", {
+  test_data <- create_test_data()
+  test_data$studies$start_date <- as.Date("2020-01-01")
+  test_data$studies$completion_date <- as.Date("2021-01-01")
+  
+  result <- analyze_trials(
+    studies = test_data$studies,
+    conditions = test_data$conditions,
+    facilities = test_data$facilities
+  )
+  
+  expect_equal(unique(result$trials$duration), 12)  # 12 months duration
+})
+
+test_that("analyze_trials handles NA dates appropriately", {
+  test_data <- create_test_data()
+  test_data$studies$start_date[1] <- NA
+  
+  result <- analyze_trials(
+    studies = test_data$studies,
+    conditions = test_data$conditions,
+    facilities = test_data$facilities
+  )
+  
+  expect_equal(nrow(result$trials), 2)  # Should exclude the NA date trial
+})
+
+test_that("analyze_trials calculates enrollment rate correctly", {
+  test_data <- create_test_data()
+  test_data$studies$enrollment <- c(120, 240, 360)  # 10, 20, 30 per month
+  test_data$studies$start_date <- as.Date("2020-01-01")
+  test_data$studies$completion_date <- as.Date("2021-01-01")
+  
+  result <- analyze_trials(
+    studies = test_data$studies,
+    conditions = test_data$conditions,
+    facilities = test_data$facilities
+  )
+  
+  expect_equal(result$metrics$enrollment_rate, c(10, 20, 30))
+})

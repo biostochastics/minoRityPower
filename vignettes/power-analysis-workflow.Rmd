@@ -1,212 +1,133 @@
+Let me provide the vignette text content:
+
 ---
-title: "Power Analysis for Multi-Center Clinical Trials"
+title: "Power Analysis for Healthcare System Interventions in Clinical Trial Enrollment"
 author: "minoRityPower Package"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Power Analysis for Multi-Center Clinical Trials}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.width = 7,
-  fig.height = 5,
-  fig.align = "center"
-)
-```
 
 # Introduction
 
-The `minoRityPower` package provides tools for power analysis in multi-center clinical trials, with a particular focus on minority participant enrollment. This vignette demonstrates a complete workflow from analyzing real trial data to conducting power analyses at both trial and participant levels.
+The minoRityPower package provides tools for estimating statistical power when evaluating healthcare system-level interventions designed to accelerate clinical trial enrollment among minority participants. Developed for the ARPA-H program application, this package offers two complementary approaches:
 
-# Package Setup
+1. Facility-level analysis examining enrollment rates
+2. Participant-level analysis modeling enrollment probabilities with minority interaction effects
 
-First, let's load the required packages:
+# Package Overview
 
-```{r packages}
+## Two Analysis Approaches
+
+### Facility-Level Analysis
+Models enrollment rates using negative binomial mixed-effects models to detect intervention effects on facility recruitment capacity. This approach:
+- Accounts for facility-level random effects
+- Models enrollment counts directly
+- Assesses system-level changes in recruitment capacity
+- Uses empirically-derived variance components
+
+### Participant-Level Analysis
+Models individual enrollment probabilities using logistic mixed-effects models to examine intervention effects on minority recruitment. This approach:
+- Tests interaction effects between interventions and minority status
+- Accounts for clustering within facilities
+- Allows specification of expected minority enrollment rates
+- Provides insight into differential intervention effects
+
+# Example Usage
+
+## Getting Started
+```r
 library(minoRityPower)
 library(dplyr)
 library(ggplot2)
 ```
 
-# Part 1: Analyzing Real Trial Data
+## Facility-Level Analysis Example
 
-## Loading Example Data
-
-The package includes example data from ClinicalTrials.gov. Let's load and examine it:
-
-```{r load-data}
-# Example data included with the package
-data(example_studies)
-data(example_conditions)
-data(example_facilities)
-
-# Examine the structure
-str(example_studies)
-str(example_conditions)
-str(example_facilities)
+First, let's examine power for detecting facility-level enrollment rate changes:
+```r
+# Basic facility analysis
+results_facility <- run_power_facility(
+  effect_sizes = c(1.25, 1.50),   # Testing 25% and 50% increases
+  Ns = c(30, 45, 60),             # Various facility counts
+  tau2_facility = 0.64,           # Facility-level variance
+  mean_rate = 11,                 # Average monthly enrollment
+  R_boot = 1000                   # Bootstrap iterations
+)
 ```
 
-## Analyzing Trial Data
+## Participant-Level Analysis Example
 
-We'll start by analyzing the trial data to understand enrollment patterns and estimate parameters for our power analysis:
-
-```{r analyze-trials}
-# Analyze trials with minimum requirements
-trial_results <- analyze_trials(
-  studies = example_studies,
-  conditions = example_conditions,
-  facilities = example_facilities,
-  min_duration = 11,    # Minimum trial duration (months)
-  min_enrollment = 24   # Minimum enrollment count
+Next, we'll analyze power for detecting differential effects among minority participants:
+```r
+# Participant-level analysis
+results_participant <- run_power_participant(
+  effect_sizes1 = c(1.25, 1.50),    # Main intervention effects
+  effect_sizes2 = c(1.75, 2.00),    # Minority interaction effects
+  Ns = c(30, 45, 60),               # Facility counts
+  minority_rate = 0.3,              # Expected minority enrollment
+  R_boot = 1000                     # Bootstrap iterations
 )
-
-# View summary statistics
-summary(trial_results$trials$enrollment_rate)
-```
-
-## Estimating Parameters
-
-Next, we'll estimate parameters needed for power analysis:
-
-```{r estimate-params}
-# Estimate parameters from trial data
-params <- estimate_power_parameters(
-  trial_results,
-  min_rate = 1,     # Minimum acceptable rate
-  max_rate = 200    # Maximum acceptable rate
-)
-
-# Examine the estimated parameters
-print(params$parameters)
-
-# Look at the distribution of enrollment rates
-hist(params$data$enrollment_rate, 
-     main = "Distribution of Enrollment Rates",
-     xlab = "Enrollment Rate (participants/month)")
-```
-
-# Part 2: Trial-Level Power Analysis
-
-## Single Power Analysis
-
-Let's start with a simple power analysis using our estimated parameters:
-
-```{r simple-power}
-# Conduct power analysis
-power_results <- simple_power(
-  effect_size = 1.25,  # 25% increase in enrollment
-  N = 50,              # 50 trials per arm
-  tau2_facility = params$parameters$log_rate_variance,
-  mean_rate = params$parameters$mean_rate,
-  R_boot = 100        # Reduced for vignette; use 1000+ in practice
-)
-
-# Examine results
-print(power_results$power)
-print(power_results$convergence_rate)
-```
-
-## Grid Search
-
-Now let's explore power across multiple parameter combinations:
-
-```{r grid-power}
-# Create temporary directory for results
-temp_dir <- tempdir()
-
-# Grid search
-grid_results <- grid_power(
-  effect_sizes1 = c(1.10, 1.25, 1.50),
-  effect_sizes2 = c(1.10, 1.25, 1.50),
-  Ns = c(30, 45, 60),
-  tau2_facility = params$parameters$log_rate_variance,
-  mean_rate = params$parameters$mean_rate,
-  output_dir = file.path(temp_dir, "trial_level")
-)
-
-# Plot results
-trial_plots <- plot_power_results(
-  file.path(temp_dir, "trial_level"),
-  analysis_type = "trial"
-)
-
-print(trial_plots$power_heatmap)
-```
-
-# Part 3: Participant-Level Power Analysis
-
-For more detailed analysis, we can simulate at the participant level using bootstrap methods:
-
-```{r bootstrap-power}
-# Grid search with bootstrap
-bootstrap_results <- grid_bootstrap_power(
-  effect_sizes1 = c(1.10, 1.25, 1.50),
-  effect_sizes_int = c(1.10, 1.25, 1.50),
-  Ns = c(30, 45),
-  tau2_trial = params$parameters$log_rate_variance,
-  K_trial = 360,
-  output_dir = file.path(temp_dir, "participant_level"),
-  R_boot = 50  # Reduced for vignette; use 500+ in practice
-)
-
-# Plot results
-participant_plots <- plot_power_results(
-  file.path(temp_dir, "participant_level"),
-  analysis_type = "participant"
-)
-
-print(participant_plots$power_heatmap)
 ```
 
 # Interpreting Results
 
-Let's compare the results from both approaches:
+## Power Tables
+The package produces power tables showing:
+- Power estimates across effect sizes and sample sizes
+- Convergence rates for model fitting
+- Results at multiple significance levels (0.05, 0.01, 0.005)
 
-```{r compare-results}
-# Create comparison plot
-grid.arrange(
-  trial_plots$power_heatmap + ggtitle("Trial-Level Power"),
-  participant_plots$power_heatmap + ggtitle("Participant-Level Power"),
-  ncol = 2
-)
-```
+## Visualization
+Power plots display:
+- Power curves across sample sizes
+- Separate panels for effect size combinations
+- Horizontal reference line at 80% power
+- Clear labeling of minority and main effects
 
-Key observations:
-1. Trial-level analysis tends to be more conservative
-2. Participant-level analysis provides more granular insights
-3. Both approaches show similar patterns in power across effect sizes
+# Advanced Usage
+
+## Parameter Selection
+
+When planning your analysis:
+
+1. Facility-Level Parameters:
+   - tau2_facility: Facility-level variance (default: 0.64)
+   - mean_rate: Average monthly enrollment (default: 11)
+
+2. Participant-Level Parameters: #assumes 25% dropout rate
+   - tau2_trial: Trial-level variance (default: 1.19)
+   - minority_rate: Expected proportion of minority participants
+   - effect_sizes2: Minority-specific intervention effects
+
+## Computational Considerations
+
+For reliable results:
+- Use at least 1000 bootstrap iterations
+- Consider parallel processing for large simulations
+- Monitor convergence rates
+- Save results to examine later
 
 # Best Practices
 
-When using this package for your own analyses:
+1. Start with a small test run:
+   - Use fewer effect sizes and sample sizes
+   - Reduce bootstrap iterations
+   - Verify output structure
 
-1. **Data Quality**:
-   - Carefully clean and validate your input data
-   - Use appropriate inclusion/exclusion criteria
-   - Check for outliers in enrollment rates
+2. For full analysis:
+   - Include realistic effect sizes
+   - Use adequate sample sizes
+   - Run sufficient bootstrap iterations
+   - Save results to files
 
-2. **Parameter Selection**:
-   - Use empirically-derived parameters when possible
-   - Consider sensitivity analyses around key parameters
-   - Document all assumptions
-
-3. **Simulation Settings**:
-   - Use larger numbers of bootstrap iterations (1000+)
-   - Check convergence rates
-   - Consider computational resources
-
-4. **Result Interpretation**:
+3. When interpreting results:
    - Consider both statistical and practical significance
-   - Account for model assumptions
-   - Report uncertainty in power estimates
+   - Examine convergence rates
+   - Look at both main and interaction effects
+   - Compare facility and participant-level results
 
 # Conclusion
 
-The `minoRityPower` package provides a comprehensive workflow for power analysis in multi-center clinical trials. By combining real data analysis with flexible simulation approaches, researchers can make informed decisions about trial design and resource allocation.
+The minoRityPower package provides comprehensive tools for power analysis in healthcare system interventions aimed at improving minority enrollment in clinical trials. By considering both facility and participant-level effects, researchers can better plan and evaluate intervention studies.
 
-For more details, see the package documentation and the references section in the README.
+---
+
+Would you like me to expand on any section or add additional details to specific topics?
