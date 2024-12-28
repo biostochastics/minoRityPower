@@ -1,4 +1,3 @@
-Let me provide the vignette text content:
 
 ---
 title: "Power Analysis for Healthcare System Interventions in Clinical Trial Enrollment"
@@ -126,8 +125,4 @@ For reliable results:
 
 # Conclusion
 
-The minoRityPower package provides comprehensive tools for power analysis in healthcare system interventions aimed at improving minority enrollment in clinical trials. By considering both facility and participant-level effects, researchers can better plan and evaluate intervention studies.
-
----
-
-Would you like me to expand on any section or add additional details to specific topics?
+minoRityPower package provides a simple tool for power analysis in healthcare system interventions aimed at improving minority enrollment in clinical trials. By considering both facility and participant-level effects, researchers can better plan and evaluate intervention studies.
